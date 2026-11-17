@@ -1240,10 +1240,12 @@ namespace SonsVRMod
 
         private RenderTexture CreateEyeTarget(string targetName)
         {
-            // Linear read/write matches the linear color space of the game; the compositor is told the
-            // color space through EColorSpace.Auto, which resolves against the sRGB flag of the texture.
+            // OpenVR Auto assumes gamma-encoded pixels for these 8-bit targets; it does not
+            // infer linear data from Unity's color space. Store sRGB pixels so that assumption
+            // is correct, including through Proton/xrizer. Unity decodes them when sampling
+            // the desktop mirror, keeping both output paths consistent.
             var rt = new RenderTexture(_currentWidth, _currentHeight, 24, RenderTextureFormat.ARGB32,
-                RenderTextureReadWrite.Linear)
+                RenderTextureReadWrite.sRGB)
             {
                 name = targetName,
                 antiAliasing = Mathf.Max(1, msaaSamples),
@@ -1254,6 +1256,10 @@ namespace SonsVRMod
             };
 
             rt.Create();
+
+            MelonLogger.Msg($"[StereoRender] {targetName}: format {rt.graphicsFormat}, " +
+                            $"sRGB {rt.sRGB}, game color space {QualitySettings.activeColorSpace}, " +
+                            $"compositor color space {EColorSpace.Auto}");
 
             // Cleared once, so the border left outside a narrowed viewport is black rather than
             // whatever happened to be in memory. The cameras only ever draw inside their viewport,
